@@ -1,82 +1,79 @@
-package internal
+package packaging
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
+
+	"optml/internal/storage"
 )
 
-const defaultOptRoot = "/opt"
+const DefaultOptRoot = "/opt"
 
-// OptManager manages filesystem installs under /opt and keeps metadata in sync.
-type OptManager struct {
+type Manager struct {
 	optRoot string
-	store   *MetadataStore
+	store   *storage.MetadataStore
 }
 
-func NewOptManager(store *MetadataStore) *OptManager {
-	return NewOptManagerWithRoot(defaultOptRoot, store)
+func NewManager(store *storage.MetadataStore) *Manager {
+	return NewManagerWithRoot(DefaultOptRoot, store)
 }
 
-func NewOptManagerWithRoot(optRoot string, store *MetadataStore) *OptManager {
+func NewManagerWithRoot(optRoot string, store *storage.MetadataStore) *Manager {
 	if strings.TrimSpace(optRoot) == "" {
-		optRoot = defaultOptRoot
+		optRoot = DefaultOptRoot
 	}
 	if store == nil {
-		store = NewMetadataStore("")
+		store = storage.NewMetadataStore("")
 	}
-	return &OptManager{
-		optRoot: filepath.Clean(optRoot),
-		store:   store,
-	}
+	return &Manager{optRoot: filepath.Clean(optRoot), store: store}
 }
 
-// Add installs srcPath into /opt/<key> and writes metadata.
-// Files and directories are copied; archives are extracted.
-func (m *OptManager) Add(key, srcPath string) (OptEntry, error) {
+func (m *Manager) Add(key, srcPath string) (storage.OptEntry, error) {
 	if strings.TrimSpace(key) == "" {
-		return OptEntry{}, WrapInvalidInput("key is required")
+		return storage.OptEntry{}, fmt.Errorf("invalid input: key is required")
 	}
 	if strings.TrimSpace(srcPath) == "" {
-		return OptEntry{}, WrapInvalidInput("srcPath is required")
+		return storage.OptEntry{}, fmt.Errorf("invalid input: srcPath is required")
 	}
 
 	srcInfo, err := os.Stat(srcPath)
 	if err != nil {
-		return OptEntry{}, fmt.Errorf("stat source: %w", err)
+		return storage.OptEntry{}, fmt.Errorf("stat source: %w", err)
 	}
 
 	destRoot, err := safeJoin(m.optRoot, key)
 	if err != nil {
-		return OptEntry{}, fmt.Errorf("%w: invalid key %q", ErrPathTraversal, key)
+		return storage.OptEntry{}, fmt.Errorf("invalid key %q: %w", key, err)
 	}
-
 	if _, err := os.Stat(destRoot); err == nil {
-		return OptEntry{}, WrapAlreadyInstalled("destination already exists: %s", destRoot)
+		return storage.OptEntry{}, fmt.Errorf("already installed: destination exists %s", destRoot)
 	} else if !os.IsNotExist(err) {
-		return OptEntry{}, fmt.Errorf("check destination: %w", err)
+		return storage.OptEntry{}, fmt.Errorf("check destination: %w", err)
 	}
 
 	switch {
 	case srcInfo.IsDir():
 		if err := copyDir(srcPath, destRoot); err != nil {
-			return OptEntry{}, err
+			return storage.OptEntry{}, err
 		}
 	default:
 		if _, derr := DetectArchiveType(srcPath); derr == nil {
 			if err := ExtractArchive(srcPath, destRoot); err != nil {
-				return OptEntry{}, err
+				return storage.OptEntry{}, err
 			}
 		} else {
 			if err := os.MkdirAll(destRoot, 0o755); err != nil {
-				return OptEntry{}, fmt.Errorf("mkdir destination: %w", err)
+				return storage.OptEntry{}, fmt.Errorf("mkdir destination: %w", err)
 			}
 			targetFile := filepath.Join(destRoot, filepath.Base(srcPath))
 			if err := copyFile(srcPath, targetFile); err != nil {
-				return OptEntry{}, err
+				return storage.OptEntry{}, err
 			}
 		}
 	}
@@ -84,15 +81,15 @@ func (m *OptManager) Add(key, srcPath string) (OptEntry, error) {
 	now := time.Now().UTC()
 	checksum, err := WriteInstallChecksum(destRoot)
 	if err != nil {
-		return OptEntry{}, fmt.Errorf("write install checksum: %w", err)
+		return storage.OptEntry{}, fmt.Errorf("write install checksum: %w", err)
 	}
-
 	binPaths, err := FindExecutables(destRoot)
 	if err != nil {
-		return OptEntry{}, fmt.Errorf("discover executables: %w", err)
+		return storage.OptEntry{}, fmt.Errorf("discover executables: %w", err)
 	}
+	sort.Strings(binPaths)
 
-	entry := OptEntry{
+	entry := storage.OptEntry{
 		Name:        key,
 		RootDir:     destRoot,
 		BinPaths:    binPaths,
@@ -101,33 +98,26 @@ func (m *OptManager) Add(key, srcPath string) (OptEntry, error) {
 		UpdatedAt:   now,
 		Checksum:    checksum,
 	}
-
 	if err := m.store.Upsert(key, entry); err != nil {
-		return OptEntry{}, fmt.Errorf("persist metadata: %w", err)
+		return storage.OptEntry{}, fmt.Errorf("persist metadata: %w", err)
 	}
-
 	return entry, nil
 }
 
-// Remove deletes /opt/<key> and removes the corresponding metadata entry.
-func (m *OptManager) Remove(key string) error {
+func (m *Manager) Remove(key string) error {
 	if strings.TrimSpace(key) == "" {
-		return WrapInvalidInput("key is required")
+		return fmt.Errorf("invalid input: key is required")
 	}
-
 	destRoot, err := safeJoin(m.optRoot, key)
 	if err != nil {
-		return fmt.Errorf("%w: invalid key %q", ErrPathTraversal, key)
+		return fmt.Errorf("invalid key %q: %w", key, err)
 	}
-
 	if err := os.RemoveAll(destRoot); err != nil {
 		return fmt.Errorf("remove install root: %w", err)
 	}
-
-	if err := m.store.Delete(key); err != nil && err != ErrNotFound {
+	if err := m.store.Delete(key); err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return fmt.Errorf("remove metadata: %w", err)
 	}
-
 	return nil
 }
 
@@ -137,22 +127,18 @@ func copyFile(src, dst string) error {
 		return fmt.Errorf("open source file: %w", err)
 	}
 	defer srcFile.Close()
-
 	srcInfo, err := srcFile.Stat()
 	if err != nil {
 		return fmt.Errorf("stat source file: %w", err)
 	}
-
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return fmt.Errorf("mkdir parent: %w", err)
 	}
-
 	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, srcInfo.Mode())
 	if err != nil {
 		return fmt.Errorf("open destination file: %w", err)
 	}
 	defer dstFile.Close()
-
 	if _, err := io.Copy(dstFile, srcFile); err != nil {
 		return fmt.Errorf("copy file: %w", err)
 	}
@@ -164,60 +150,21 @@ func copyDir(srcDir, dstDir string) error {
 		if err != nil {
 			return fmt.Errorf("walk source dir: %w", err)
 		}
-
 		rel, err := filepath.Rel(srcDir, path)
 		if err != nil {
 			return fmt.Errorf("resolve relative path: %w", err)
 		}
-
 		targetPath := filepath.Join(dstDir, rel)
 		info, err := d.Info()
 		if err != nil {
 			return fmt.Errorf("read dir entry info: %w", err)
 		}
-
 		if d.IsDir() {
 			if err := os.MkdirAll(targetPath, info.Mode()); err != nil {
 				return fmt.Errorf("mkdir target dir: %w", err)
 			}
 			return nil
 		}
-
 		return copyFile(path, targetPath)
 	})
-}
-
-// FindExecutables recursively discovers executable files under rootDir.
-func FindExecutables(rootDir string) ([]string, error) {
-	info, err := os.Stat(rootDir)
-	if err != nil {
-		return nil, fmt.Errorf("stat root dir: %w", err)
-	}
-	if !info.IsDir() {
-		return nil, WrapInvalidInput("rootDir must be a directory: %s", rootDir)
-	}
-
-	binPaths := []string{}
-	err = filepath.WalkDir(rootDir, func(path string, d os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return fmt.Errorf("walk path: %w", walkErr)
-		}
-		if d.IsDir() {
-			return nil
-		}
-
-		entryInfo, err := d.Info()
-		if err != nil {
-			return fmt.Errorf("stat entry: %w", err)
-		}
-		if entryInfo.Mode().IsRegular() && entryInfo.Mode().Perm()&0o111 != 0 {
-			binPaths = append(binPaths, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return binPaths, nil
 }
