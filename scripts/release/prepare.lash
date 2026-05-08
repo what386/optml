@@ -12,7 +12,7 @@ if #argv == 0 || #argv > 1
 end
 
 go fmt .
-git add src/
+git add cmd/ internal/ pkg/
 git commit -m "go fmt" || true
 
 let version = argv[0]
