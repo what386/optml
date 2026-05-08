@@ -47,7 +47,7 @@ jobs:
         shell: bash
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: optml-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/optml-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.binary_ext }}
