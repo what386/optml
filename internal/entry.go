@@ -7,9 +7,6 @@ type OptEntry struct {
 	// Name is the logical program identifier (for example "node" or "python").
 	Name string `json:"name"`
 
-	// Version is the installed program version.
-	Version string `json:"version"`
-
 	// RootDir is the absolute install root under /opt
 	RootDir string `json:"root_dir"`
 
