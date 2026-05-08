@@ -19,8 +19,6 @@ srun *args:
     go build .
     sudo ./optml {{args}}
 
-
-
 prepare version:
     lash run scripts/release/prepare.lash {{version}}
 
