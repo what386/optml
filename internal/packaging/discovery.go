@@ -31,10 +31,18 @@ func DiscoverOptEntries(optRoot string) (storage.MetadataState, error) {
 				return storage.MetadataState{}, fmt.Errorf("find executables for %q: %w", fullPath, err)
 			}
 			sort.Strings(binPaths)
+			pathDirs := []string(nil)
+			if len(binPaths) == 0 {
+				pathDirs, err = SelectFallbackPathDirs(fullPath)
+				if err != nil {
+					return storage.MetadataState{}, fmt.Errorf("find fallback path dirs for %q: %w", fullPath, err)
+				}
+			}
 			state.Entries[name] = storage.OptEntry{
 				Name:        name,
 				RootDir:     fullPath,
 				BinPaths:    binPaths,
+				PathDirs:    pathDirs,
 				Managed:     false,
 				InstalledAt: info.ModTime().UTC(),
 				UpdatedAt:   now,

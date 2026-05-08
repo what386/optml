@@ -27,64 +27,15 @@ func NewShellManager(pathsFile string) *ShellManager {
 }
 
 func (m *ShellManager) AddEntry(entry storage.OptEntry) error {
-	state, err := m.loadStateFromPathsFile()
-	if err != nil {
-		return err
-	}
-	state[entry.Name] = entry
-	return m.writeState(state)
+	return m.writeState(map[string]storage.OptEntry{entry.Name: entry})
 }
 
 func (m *ShellManager) RemoveEntry(entry storage.OptEntry) error {
-	state, err := m.loadStateFromPathsFile()
-	if err != nil {
-		return err
-	}
-	delete(state, entry.Name)
-	return m.writeState(state)
+	return m.writeState(map[string]storage.OptEntry{})
 }
 
 func (m *ShellManager) RebuildFromState(state storage.MetadataState) error {
 	return m.writeState(state.Entries)
-}
-
-func (m *ShellManager) loadStateFromPathsFile() (map[string]storage.OptEntry, error) {
-	content, err := os.ReadFile(m.pathsFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return map[string]storage.OptEntry{}, nil
-		}
-		return nil, fmt.Errorf("read paths file: %w", err)
-	}
-
-	state := make(map[string]storage.OptEntry)
-	for _, line := range strings.Split(string(content), "\n") {
-		pathValue, ok := parseExportPath(strings.TrimSpace(line))
-		if !ok {
-			continue
-		}
-		if pathValue == defaultSymlinkPath {
-			continue
-		}
-
-		clean := filepath.Clean(pathValue)
-		name := filepath.Base(clean)
-		root := clean
-		if name == "bin" {
-			root = filepath.Dir(clean)
-			name = filepath.Base(root)
-		}
-		if name == "" || name == "." || name == string(filepath.Separator) {
-			continue
-		}
-
-		state[name] = storage.OptEntry{
-			Name:    name,
-			RootDir: root,
-		}
-	}
-
-	return state, nil
 }
 
 func (m *ShellManager) writeState(entries map[string]storage.OptEntry) error {
@@ -107,13 +58,14 @@ func (m *ShellManager) writeState(entries map[string]storage.OptEntry) error {
 
 	for _, name := range names {
 		entry := entries[name]
-		path := bestPathEntry(entry)
-		if path == "" {
-			continue
+		for _, path := range entry.PathDirs {
+			if strings.TrimSpace(path) == "" {
+				continue
+			}
+			escaped := strings.ReplaceAll(path, `"`, `\\"`)
+			escaped = strings.ReplaceAll(escaped, `$`, `\\$`)
+			lines = append(lines, fmt.Sprintf(`export PATH="%s:$PATH"`, escaped))
 		}
-		escaped := strings.ReplaceAll(path, `"`, `\\"`)
-		escaped = strings.ReplaceAll(escaped, `$`, `\\$`)
-		lines = append(lines, fmt.Sprintf(`export PATH="%s:$PATH"`, escaped))
 	}
 
 	content := strings.Join(lines, "\n") + "\n"
@@ -127,27 +79,4 @@ func (m *ShellManager) writeState(entries map[string]storage.OptEntry) error {
 	}
 
 	return nil
-}
-
-func bestPathEntry(entry storage.OptEntry) string {
-	if strings.TrimSpace(entry.RootDir) == "" {
-		return ""
-	}
-	binDir := filepath.Join(entry.RootDir, "bin")
-	if info, err := os.Stat(binDir); err == nil && info.IsDir() {
-		return binDir
-	}
-	return entry.RootDir
-}
-
-func parseExportPath(line string) (string, bool) {
-	prefix := `export PATH="`
-	suffix := `:$PATH"`
-	if !strings.HasPrefix(line, prefix) || !strings.HasSuffix(line, suffix) {
-		return "", false
-	}
-	inner := strings.TrimSuffix(strings.TrimPrefix(line, prefix), suffix)
-	inner = strings.ReplaceAll(inner, `\\$`, `$`)
-	inner = strings.ReplaceAll(inner, `\\"`, `"`)
-	return inner, true
 }

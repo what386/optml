@@ -19,6 +19,7 @@ type OptEntry struct {
 	Name        string    `json:"name"`
 	RootDir     string    `json:"root_dir"`
 	BinPaths    []string  `json:"bin_paths"`
+	PathDirs    []string  `json:"path_dirs,omitempty"`
 	Managed     bool      `json:"managed"`
 	InstalledAt time.Time `json:"installed_at"`
 	UpdatedAt   time.Time `json:"updated_at"`

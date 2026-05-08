@@ -34,10 +34,6 @@ var removeCmd = &cobra.Command{
 			return err
 		}
 		if err == nil {
-			shellMgr := integration.NewShellManager("")
-			if err := shellMgr.RemoveEntry(entry); err != nil {
-				return err
-			}
 			symlinkMgr := integration.NewSymlinkManager("")
 			if err := symlinkMgr.RemoveEntry(entry); err != nil {
 				return err
@@ -45,6 +41,14 @@ var removeCmd = &cobra.Command{
 		}
 
 		if err := manager.Remove(name); err != nil {
+			return err
+		}
+		shellMgr := integration.NewShellManager("")
+		state, err := store.Load()
+		if err != nil {
+			return err
+		}
+		if err := shellMgr.RebuildFromState(state); err != nil {
 			return err
 		}
 

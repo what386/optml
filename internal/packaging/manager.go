@@ -88,11 +88,19 @@ func (m *Manager) Add(key, srcPath string) (storage.OptEntry, error) {
 		return storage.OptEntry{}, fmt.Errorf("discover executables: %w", err)
 	}
 	sort.Strings(binPaths)
+	pathDirs := []string(nil)
+	if len(binPaths) == 0 {
+		pathDirs, err = SelectFallbackPathDirs(destRoot)
+		if err != nil {
+			return storage.OptEntry{}, fmt.Errorf("discover fallback path dirs: %w", err)
+		}
+	}
 
 	entry := storage.OptEntry{
 		Name:        key,
 		RootDir:     destRoot,
 		BinPaths:    binPaths,
+		PathDirs:    pathDirs,
 		Managed:     true,
 		InstalledAt: now,
 		UpdatedAt:   now,

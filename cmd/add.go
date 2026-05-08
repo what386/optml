@@ -35,7 +35,11 @@ var addCmd = &cobra.Command{
 			return err
 		}
 		shellMgr := integration.NewShellManager("")
-		if err := shellMgr.AddEntry(entry); err != nil {
+		state, err := store.Load()
+		if err != nil {
+			return err
+		}
+		if err := shellMgr.RebuildFromState(state); err != nil {
 			return err
 		}
 		symlinkMgr := integration.NewSymlinkManager("")
