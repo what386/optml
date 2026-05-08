@@ -30,14 +30,6 @@ jobs:
             goos: darwin
             goarch: arm64
             binary_ext: ""
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            binary_ext: ".exe"
-          - os: windows-latest
-            goos: windows
-            goarch: arm64
-            binary_ext: ".exe"
 
     steps:
       - uses: actions/checkout@v4
