@@ -1,9 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"os"
+
+	"optml/cmd"
 )
 
 func main() {
-	fmt.Println("Hello, World!")
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
