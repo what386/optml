@@ -132,6 +132,12 @@ func isDeniedExecutable(path string) bool {
 	if strings.HasSuffix(name, ".dylib") {
 		return true
 	}
+	if strings.HasSuffix(name, ".sh") {
+		return true
+	}
+	if strings.HasSuffix(name, ".py") {
+		return true
+	}
 
 	return false
 }
