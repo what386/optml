@@ -8,19 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var listMetadataPath string
-
-func init() {
-	listCmd.Flags().StringVar(&listMetadataPath, "metadata-path", "/opt/optml/metadata.json", "metadata JSON file path")
-	rootCmd.AddCommand(listCmd)
-}
+func init() { rootCmd.AddCommand(listCmd) }
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List installed programs",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		store := storage.NewMetadataStore(listMetadataPath)
+		store := storage.NewMetadataStore("")
 		entries, err := store.List()
 		if err != nil {
 			return err

@@ -5,25 +5,19 @@ import (
 
 	"optml/internal/integration"
 	"optml/internal/packaging"
+	"optml/internal/storage"
 
 	"github.com/spf13/cobra"
 )
 
-var refreshOptRoot string
-var refreshMetadataPath string
-
-func init() {
-	refreshCmd.Flags().StringVar(&refreshOptRoot, "opt-root", "/opt", "installation root directory")
-	refreshCmd.Flags().StringVar(&refreshMetadataPath, "metadata-path", "/opt/optml/metadata.json", "metadata JSON file path")
-	rootCmd.AddCommand(refreshCmd)
-}
+func init() { rootCmd.AddCommand(refreshCmd) }
 
 var refreshCmd = &cobra.Command{
 	Use:   "refresh",
 	Short: "Refresh package metadata",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		state, err := packaging.RefreshMetadata(refreshOptRoot, refreshMetadataPath)
+		state, err := packaging.RefreshMetadata(packaging.DefaultOptRoot, storage.DefaultMetadataPath)
 		if err != nil {
 			return err
 		}
@@ -36,7 +30,7 @@ var refreshCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Fprintf(cmd.OutOrStdout(), "refreshed %d entries from %s into %s\n", len(state.Entries), refreshOptRoot, refreshMetadataPath)
+		fmt.Fprintf(cmd.OutOrStdout(), "refreshed %d entries from %s into %s\n", len(state.Entries), packaging.DefaultOptRoot, storage.DefaultMetadataPath)
 		return nil
 	},
 }

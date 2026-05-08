@@ -10,12 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var infoMetadataPath string
-
-func init() {
-	infoCmd.Flags().StringVar(&infoMetadataPath, "metadata-path", "/opt/optml/metadata.json", "metadata JSON file path")
-	rootCmd.AddCommand(infoCmd)
-}
+func init() { rootCmd.AddCommand(infoCmd) }
 
 var infoCmd = &cobra.Command{
 	Use:   "info <item>",
@@ -23,7 +18,7 @@ var infoCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		store := storage.NewMetadataStore(infoMetadataPath)
+		store := storage.NewMetadataStore("")
 		entry, err := store.Get(name)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {

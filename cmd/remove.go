@@ -11,14 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var removeOptRoot string
-var removeMetadataPath string
-
-func init() {
-	removeCmd.Flags().StringVar(&removeOptRoot, "opt-root", "/opt", "installation root directory")
-	removeCmd.Flags().StringVar(&removeMetadataPath, "metadata-path", "/opt/optml/metadata.json", "metadata JSON file path")
-	rootCmd.AddCommand(removeCmd)
-}
+func init() { rootCmd.AddCommand(removeCmd) }
 
 var removeCmd = &cobra.Command{
 	Use:   "remove <item>",
@@ -27,8 +20,8 @@ var removeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		store := storage.NewMetadataStore(removeMetadataPath)
-		manager := packaging.NewManagerWithRoot(removeOptRoot, store)
+		store := storage.NewMetadataStore("")
+		manager := packaging.NewManager(store)
 		entry, err := store.Get(name)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
 			return err

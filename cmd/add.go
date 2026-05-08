@@ -10,14 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var addOptRoot string
-var addMetadataPath string
-
-func init() {
-	addCmd.Flags().StringVar(&addOptRoot, "opt-root", "/opt", "installation root directory")
-	addCmd.Flags().StringVar(&addMetadataPath, "metadata-path", "/opt/optml/metadata.json", "metadata JSON file path")
-	rootCmd.AddCommand(addCmd)
-}
+func init() { rootCmd.AddCommand(addCmd) }
 
 var addCmd = &cobra.Command{
 	Use:   "add <name> <source>",
@@ -27,8 +20,8 @@ var addCmd = &cobra.Command{
 		name := args[0]
 		source := args[1]
 
-		store := storage.NewMetadataStore(addMetadataPath)
-		manager := packaging.NewManagerWithRoot(addOptRoot, store)
+		store := storage.NewMetadataStore("")
+		manager := packaging.NewManager(store)
 
 		entry, err := manager.Add(name, source)
 		if err != nil {
