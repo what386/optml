@@ -82,6 +82,11 @@ func (m *OptManager) Add(key, srcPath string) (OptEntry, error) {
 	}
 
 	now := time.Now().UTC()
+	checksum, err := WriteInstallChecksum(destRoot)
+	if err != nil {
+		return OptEntry{}, fmt.Errorf("write install checksum: %w", err)
+	}
+
 	binPaths, err := FindExecutables(destRoot)
 	if err != nil {
 		return OptEntry{}, fmt.Errorf("discover executables: %w", err)
@@ -94,6 +99,7 @@ func (m *OptManager) Add(key, srcPath string) (OptEntry, error) {
 		Managed:     true,
 		InstalledAt: now,
 		UpdatedAt:   now,
+		Checksum:    checksum,
 	}
 
 	if err := m.store.Upsert(key, entry); err != nil {
