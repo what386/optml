@@ -98,6 +98,11 @@ func (m *Manager) Add(key, srcPath string) (storage.OptEntry, error) {
 		UpdatedAt:   now,
 		Checksum:    checksum,
 	}
+
+	if err := handoffOwnershipIfSudo(destRoot); err != nil {
+		return storage.OptEntry{}, fmt.Errorf("handoff ownership: %w", err)
+	}
+
 	if err := m.store.Upsert(key, entry); err != nil {
 		return storage.OptEntry{}, fmt.Errorf("persist metadata: %w", err)
 	}
