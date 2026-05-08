@@ -1,5 +1,12 @@
-# Changelog
+# Changelog — optml
 
-## [0.1.0]
+*Generated on 2026-05-08*
 
-- Initial release.
+## 0.1.0 — 2026-05-08
+
+### Changes
+
+- initial release
+
+
+
