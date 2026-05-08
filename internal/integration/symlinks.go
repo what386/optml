@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"optml/internal"
+	"optml/internal/storage"
 )
 
 const defaultSymlinkDir = "/opt/optml/bin"
@@ -23,12 +23,12 @@ func NewSymlinkManager(symlinkDir string) *SymlinkManager {
 	return &SymlinkManager{symlinkDir: symlinkDir}
 }
 
-func (m *SymlinkManager) AddEntry(entry internal.OptEntry) error {
+func (m *SymlinkManager) AddEntry(entry storage.OptEntry) error {
 	if err := os.MkdirAll(m.symlinkDir, 0o755); err != nil {
 		return fmt.Errorf("mkdir symlink dir: %w", err)
 	}
 
-	desired, err := m.buildDesiredLinks(internal.MetadataState{Entries: map[string]internal.OptEntry{entry.Name: entry}})
+	desired, err := m.buildDesiredLinks(storage.MetadataState{Entries: map[string]storage.OptEntry{entry.Name: entry}})
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (m *SymlinkManager) AddEntry(entry internal.OptEntry) error {
 	return nil
 }
 
-func (m *SymlinkManager) RemoveEntry(entry internal.OptEntry) error {
+func (m *SymlinkManager) RemoveEntry(entry storage.OptEntry) error {
 	items, err := os.ReadDir(m.symlinkDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -80,7 +80,7 @@ func (m *SymlinkManager) RemoveEntry(entry internal.OptEntry) error {
 	return nil
 }
 
-func (m *SymlinkManager) RebuildFromState(state internal.MetadataState) error {
+func (m *SymlinkManager) RebuildFromState(state storage.MetadataState) error {
 	if err := os.MkdirAll(m.symlinkDir, 0o755); err != nil {
 		return fmt.Errorf("mkdir symlink dir: %w", err)
 	}
@@ -160,7 +160,7 @@ func (m *SymlinkManager) ensureLink(name, target string) error {
 	return nil
 }
 
-func (m *SymlinkManager) buildDesiredLinks(state internal.MetadataState) (map[string]string, error) {
+func (m *SymlinkManager) buildDesiredLinks(state storage.MetadataState) (map[string]string, error) {
 	names := make([]string, 0, len(state.Entries))
 	for name := range state.Entries {
 		names = append(names, name)

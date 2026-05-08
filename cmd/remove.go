@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"optml/internal"
 	"optml/internal/integration"
+	"optml/internal/packaging"
+	"optml/internal/storage"
 
 	"github.com/spf13/cobra"
 )
@@ -15,7 +16,7 @@ var removeMetadataPath string
 
 func init() {
 	removeCmd.Flags().StringVar(&removeOptRoot, "opt-root", "/opt", "installation root directory")
-	removeCmd.Flags().StringVar(&removeMetadataPath, "metadata-path", "/opt/metadata.json", "metadata JSON file path")
+	removeCmd.Flags().StringVar(&removeMetadataPath, "metadata-path", "/opt/optml/metadata.json", "metadata JSON file path")
 	rootCmd.AddCommand(removeCmd)
 }
 
@@ -26,10 +27,10 @@ var removeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 
-		store := internal.NewMetadataStore(removeMetadataPath)
-		manager := internal.NewOptManagerWithRoot(removeOptRoot, store)
+		store := storage.NewMetadataStore(removeMetadataPath)
+		manager := packaging.NewManagerWithRoot(removeOptRoot, store)
 		entry, err := store.Get(name)
-		if err != nil && !errors.Is(err, internal.ErrNotFound) {
+		if err != nil && !errors.Is(err, storage.ErrNotFound) {
 			return err
 		}
 		if err == nil {

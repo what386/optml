@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"optml/internal"
+	"optml/internal/storage"
 )
 
 const (
@@ -26,7 +26,7 @@ func NewShellManager(pathsFile string) *ShellManager {
 	return &ShellManager{pathsFile: pathsFile}
 }
 
-func (m *ShellManager) AddEntry(entry internal.OptEntry) error {
+func (m *ShellManager) AddEntry(entry storage.OptEntry) error {
 	state, err := m.loadStateFromPathsFile()
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (m *ShellManager) AddEntry(entry internal.OptEntry) error {
 	return m.writeState(state)
 }
 
-func (m *ShellManager) RemoveEntry(entry internal.OptEntry) error {
+func (m *ShellManager) RemoveEntry(entry storage.OptEntry) error {
 	state, err := m.loadStateFromPathsFile()
 	if err != nil {
 		return err
@@ -44,20 +44,20 @@ func (m *ShellManager) RemoveEntry(entry internal.OptEntry) error {
 	return m.writeState(state)
 }
 
-func (m *ShellManager) RebuildFromState(state internal.MetadataState) error {
+func (m *ShellManager) RebuildFromState(state storage.MetadataState) error {
 	return m.writeState(state.Entries)
 }
 
-func (m *ShellManager) loadStateFromPathsFile() (map[string]internal.OptEntry, error) {
+func (m *ShellManager) loadStateFromPathsFile() (map[string]storage.OptEntry, error) {
 	content, err := os.ReadFile(m.pathsFile)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return map[string]internal.OptEntry{}, nil
+			return map[string]storage.OptEntry{}, nil
 		}
 		return nil, fmt.Errorf("read paths file: %w", err)
 	}
 
-	state := make(map[string]internal.OptEntry)
+	state := make(map[string]storage.OptEntry)
 	for _, line := range strings.Split(string(content), "\n") {
 		pathValue, ok := parseExportPath(strings.TrimSpace(line))
 		if !ok {
@@ -78,7 +78,7 @@ func (m *ShellManager) loadStateFromPathsFile() (map[string]internal.OptEntry, e
 			continue
 		}
 
-		state[name] = internal.OptEntry{
+		state[name] = storage.OptEntry{
 			Name:    name,
 			RootDir: root,
 		}
@@ -87,7 +87,7 @@ func (m *ShellManager) loadStateFromPathsFile() (map[string]internal.OptEntry, e
 	return state, nil
 }
 
-func (m *ShellManager) writeState(entries map[string]internal.OptEntry) error {
+func (m *ShellManager) writeState(entries map[string]storage.OptEntry) error {
 	if err := os.MkdirAll(filepath.Dir(m.pathsFile), 0o755); err != nil {
 		return fmt.Errorf("mkdir paths dir: %w", err)
 	}
@@ -129,7 +129,7 @@ func (m *ShellManager) writeState(entries map[string]internal.OptEntry) error {
 	return nil
 }
 
-func bestPathEntry(entry internal.OptEntry) string {
+func bestPathEntry(entry storage.OptEntry) string {
 	if strings.TrimSpace(entry.RootDir) == "" {
 		return ""
 	}

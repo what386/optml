@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"optml/internal"
 	"optml/internal/integration"
+	"optml/internal/packaging"
 
 	"github.com/spf13/cobra"
 )
@@ -14,7 +14,7 @@ var refreshMetadataPath string
 
 func init() {
 	refreshCmd.Flags().StringVar(&refreshOptRoot, "opt-root", "/opt", "installation root directory")
-	refreshCmd.Flags().StringVar(&refreshMetadataPath, "metadata-path", "/opt/metadata.json", "metadata JSON file path")
+	refreshCmd.Flags().StringVar(&refreshMetadataPath, "metadata-path", "/opt/optml/metadata.json", "metadata JSON file path")
 	rootCmd.AddCommand(refreshCmd)
 }
 
@@ -23,7 +23,7 @@ var refreshCmd = &cobra.Command{
 	Short: "Refresh package metadata",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		state, err := internal.RefreshMetadata(refreshOptRoot, refreshMetadataPath)
+		state, err := packaging.RefreshMetadata(refreshOptRoot, refreshMetadataPath)
 		if err != nil {
 			return err
 		}
