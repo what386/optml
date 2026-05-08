@@ -5,6 +5,10 @@
 
 ## Tasks
 
-- [ ] initial release
+
+## Completed
+
+- [x] initial release
       @created 2026-05-08 21:57
+      @completed 2026-05-08 21:57
 
