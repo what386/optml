@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"optml/internal"
+	"optml/internal/integration"
 
 	"github.com/spf13/cobra"
 )
@@ -30,6 +31,14 @@ var addCmd = &cobra.Command{
 
 		entry, err := manager.Add(name, source)
 		if err != nil {
+			return err
+		}
+		shellMgr := integration.NewShellManager("")
+		if err := shellMgr.AddEntry(entry); err != nil {
+			return err
+		}
+		symlinkMgr := integration.NewSymlinkManager("")
+		if err := symlinkMgr.AddEntry(entry); err != nil {
 			return err
 		}
 

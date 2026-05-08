@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"optml/internal"
+	"optml/internal/integration"
 
 	"github.com/spf13/cobra"
 )
@@ -24,6 +25,14 @@ var refreshCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		state, err := internal.RefreshMetadata(refreshOptRoot, refreshMetadataPath)
 		if err != nil {
+			return err
+		}
+		shellMgr := integration.NewShellManager("")
+		if err := shellMgr.RebuildFromState(state); err != nil {
+			return err
+		}
+		symlinkMgr := integration.NewSymlinkManager("")
+		if err := symlinkMgr.RebuildFromState(state); err != nil {
 			return err
 		}
 

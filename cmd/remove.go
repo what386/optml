@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"optml/internal"
+	"optml/internal/integration"
 
 	"github.com/spf13/cobra"
 )
@@ -26,6 +28,20 @@ var removeCmd = &cobra.Command{
 
 		store := internal.NewMetadataStore(removeMetadataPath)
 		manager := internal.NewOptManagerWithRoot(removeOptRoot, store)
+		entry, err := store.Get(name)
+		if err != nil && !errors.Is(err, internal.ErrNotFound) {
+			return err
+		}
+		if err == nil {
+			shellMgr := integration.NewShellManager("")
+			if err := shellMgr.RemoveEntry(entry); err != nil {
+				return err
+			}
+			symlinkMgr := integration.NewSymlinkManager("")
+			if err := symlinkMgr.RemoveEntry(entry); err != nil {
+				return err
+			}
+		}
 
 		if err := manager.Remove(name); err != nil {
 			return err
