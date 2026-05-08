@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-const defaultMetadataPath = "/opt/metadata.json"
+const defaultMetadataPath = "/opt/optml/metadata.json"
 
 // ErrNotFound is returned when a metadata entry key does not exist.
 var ErrNotFound = errors.New("metadata entry not found")
